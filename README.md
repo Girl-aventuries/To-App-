@@ -1,21 +1,26 @@
 
+ # Projeto Final - Aplicativo de To-Do List em Flutter
+
  # NOME: Rute Lopes Pinto
  # NOME: Kananda Matos Dos Santos
  
- # Projeto Final - Aplicativo de To-Do List em Flutter
+
 
  # Definição do Projeto
+ 
 Como parte do trabalho final da disciplina **Usabilidade, Web, Mobile e Games**, será desenvolvido um aplicativo mobile utilizando Flutter. O objetivo principal do aplicativo é ajudar os usuários a gerenciar suas tarefas diárias e lembretes de maneira eficiente e intuitiva.
 
 ---
 
 # Objetivo
+
 - Especificar e prototipar um aplicativo de to-do list.
 - Desenvolver o aplicativo com foco em usabilidade, desempenho e segurança.
 
 ---
 
 # Funcionalidades do Aplicativo
+
 
 1. # Gerenciamento de Tarefas
 - **Adicionar Tarefas**: Criar novas tarefas com título, descrição, data e hora de vencimento.
@@ -24,7 +29,7 @@ Como parte do trabalho final da disciplina **Usabilidade, Web, Mobile e Games**,
 - **Marcar como Concluída**: Sinalizar tarefas finalizadas.
 - **Categorias**: Organizar tarefas em categorias personalizadas.
 
-2. Gerenciamento de Lembretes
+2. # Gerenciamento de Lembretes
 - **Adicionar Lembretes**: Criar lembretes com título, descrição, data e hora.
 - **Editar Lembretes**: Modificar informações dos lembretes.
 - **Excluir Lembretes**: Remover lembretes que não são mais necessários.
