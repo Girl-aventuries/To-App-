@@ -1,10 +1,9 @@
 import 'dart:async';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
 
 class ReminderService {
   static final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  static final List<Reminder> _reminders = []; // Lista para armazenar lembretes agendados
 
   /// Inicialização do serviço de notificações
   static Future<void> init() async {
@@ -17,40 +16,39 @@ class ReminderService {
     await _notifications.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        // Opcional: Lógica ao clicar na notificação
+        // Lógica ao clicar na notificação
         print("Notificação clicada com ID: ${response.id}");
       },
     );
     print("Serviço de notificações inicializado.");
 
-    // Criar o canal de notificações para Android 8.0 ou superior
-    const androidChannel = AndroidNotificationChannel(
-      'reminder_channel', // ID do canal
-      'Task Reminders',   // Nome do canal
-      description: 'Notificações para lembretes de tarefas.',
-      importance: Importance.high,
-      playSound: true, // Tocar som para notificações
-      showBadge: true,
-    );
-
-    // Criar o canal, se necessário
-    await _notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(androidChannel);
-    print("Canal de notificações criado.");
-
-    // Inicializar timezone
-    tz.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation('America/Sao_Paulo')); // Ajuste conforme necessário
-    print("Timezone configurado para 'America/Sao_Paulo'.");
+    // Iniciar o verificador de hora a cada segundo
+    _startScheduledTaskChecker();
   }
 
-  /// Enviar a notificação imediatamente (apenas para testes)
-  static Future<void> sendImmediateNotification({
-    required int id,
-    required String title,
-    required String body,
-  }) async {
-    print("Enviando notificação imediata...");
+  /// Verificar os lembretes agendados a cada segundo
+  static void _startScheduledTaskChecker() {
+    Timer.periodic(Duration(seconds: 1), (timer) {
+      final now = DateTime.now();
+
+      // Verificar se algum lembrete corresponde ao horário atual
+      for (var reminder in _reminders) {
+        if (reminder.scheduledTime.year == now.year &&
+            reminder.scheduledTime.month == now.month &&
+            reminder.scheduledTime.day == now.day &&
+            reminder.scheduledTime.hour == now.hour &&
+            reminder.scheduledTime.minute == now.minute) {
+          // Enviar a notificação se o horário coincidir
+          _sendNotification(reminder);
+          _reminders.remove(reminder); // Remover o lembrete após enviar a notificação
+        }
+      }
+    });
+  }
+
+  /// Enviar notificação do lembrete
+  static Future<void> _sendNotification(Reminder reminder) async {
+    print("Enviando notificação para: ${reminder.title}");
 
     const androidDetails = AndroidNotificationDetails(
       'reminder_channel', // ID do canal
@@ -63,12 +61,12 @@ class ReminderService {
     const notificationDetails = NotificationDetails(android: androidDetails);
 
     await _notifications.show(
-      id,
-      title,
-      body,
+      reminder.id,
+      reminder.title,
+      reminder.body,
       notificationDetails,
     );
-    print("Notificação imediata enviada.");
+    print("Notificação enviada para o lembrete: ${reminder.title}");
   }
 
   /// Agendar lembrete para a tarefa
@@ -80,47 +78,40 @@ class ReminderService {
   }) async {
     print("Agendando lembrete: $title");
 
-    // Converter DateTime para TZDateTime
-    final tzTime = tz.TZDateTime.from(scheduledTime, tz.local);
-    print("Data e hora do lembrete: $tzTime");
+    final now = DateTime.now();
+    // Verificar se o horário do lembrete não passou
+    if (scheduledTime.isBefore(now)) {
+      print("O horário agendado já passou.");
+      return;
+    }
 
-    const androidDetails = AndroidNotificationDetails(
-      'reminder_channel', // ID do canal
-      'Task Reminders',   // Nome do canal
-      channelDescription: 'Notificações para lembretes de tarefas.',
-      importance: Importance.high,
-      priority: Priority.high,
-    );
+    // Armazenar o lembrete na lista
+    final reminder = Reminder(id, title, body, scheduledTime);
+    _reminders.add(reminder);
 
-    const notificationDetails = NotificationDetails(android: androidDetails);
-
-    // Agendar a notificação
-    await _notifications.zonedSchedule(
-      id,
-      title,
-      body,
-      tzTime,
-      notificationDetails,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.wallClockTime,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle, // Substituto para androidAllowWhileIdle
-      matchDateTimeComponents: DateTimeComponents.time, // Opcional: para notificações diárias no mesmo horário
-    );
-
-    print("Lembrete agendado para: $tzTime");
+    print("Lembrete agendado para: $scheduledTime");
   }
-
 
   /// Cancelar um lembrete específico
   static Future<void> cancelReminder(int id) async {
     print("Cancelando o lembrete com ID: $id");
-    await _notifications.cancel(id);
+    _reminders.removeWhere((reminder) => reminder.id == id);
     print("Lembrete com ID $id cancelado.");
   }
 
   /// Cancelar todos os lembretes
   static Future<void> cancelAllReminders() async {
     print("Cancelando todos os lembretes...");
-    await _notifications.cancelAll();
+    _reminders.clear();
     print("Todos os lembretes cancelados.");
   }
+}
+
+class Reminder {
+  final int id;
+  final String title;
+  final String body;
+  final DateTime scheduledTime;
+
+  Reminder(this.id, this.title, this.body, this.scheduledTime);
 }
